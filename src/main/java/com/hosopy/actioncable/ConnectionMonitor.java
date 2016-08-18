@@ -1,7 +1,8 @@
 package com.hosopy.actioncable;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class ConnectionMonitor {
 
@@ -26,6 +27,7 @@ public class ConnectionMonitor {
     private long stoppedAt = 0; // milliseconds
 
     private int reconnectAttempts = 0;
+    private ScheduledExecutorService pollingTask;
 
     /*package*/ ConnectionMonitor(Connection connection, Connection.Options options) {
         this.connection = connection;
@@ -66,16 +68,15 @@ public class ConnectionMonitor {
     }
 
     private void poll() {
-        final Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
+        pollingTask = Executors.newSingleThreadScheduledExecutor();
+        pollingTask.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 if (stoppedAt == 0) {
                     reconnectIfStale();
-                    poll();
                 }
             }
-        }, getInterval());
+        }, 0, getInterval(), TimeUnit.MILLISECONDS);
     }
 
     private void reconnectIfStale() {
